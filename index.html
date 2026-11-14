@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blindaje Bs — Defiéndete de la devaluación</title>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #131a2b;
+      --surface-2: #1a2234;
+      --border: #263049;
+      --border-bright: #364a73;
+      --text: #e6e9f0;
+      --text-2: #a8b1c7;
+      --muted: #6d7689;
+      --safe: #00d97e;
+      --safe-dim: rgba(0,217,126,0.12);
+      --warn: #f59e0b;
+      --warn-dim: rgba(245,158,11,0.12);
+      --danger: #ef4444;
+      --danger-dim: rgba(239,68,68,0.12);
+      --info: #3b82f6;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: 40px;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(circle at 20% 0%, rgba(59,130,246,0.08), transparent 40%),
+        radial-gradient(circle at 80% 100%, rgba(0,217,126,0.06), transparent 40%);
+    }
+    .shield-header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .shield-header::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent, rgba(59,130,246,0.04));
+      pointer-events: none;
+    }
+    .shield-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .shield-label {
+      font-size: .7rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .shield-percent {
+      font-size: 2.8rem;
+      font-weight: 900;
+      letter-spacing: -.03em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color .3s;
+    }
+    .shield-percent.safe { color: var(--safe); text-shadow: 0 0 30px rgba(0,217,126,0.4); }
+    .shield-percent.warn { color: var(--warn); text-shadow: 0 0 30px rgba(245,158,11,0.4); }
+    .shield-percent.danger { color: var(--danger); text-shadow: 0 0 30px rgba(239,68,68,0.4); }
+    .shield-bar {
+      height: 10px;
+      border-radius: 6px;
+      background: var(--surface-2);
+      overflow: hidden;
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .shield-fill-hard {
+      background: linear-gradient(90deg, var(--safe), #00b368);
+      transition: width .6s ease;
+      box-shadow: 0 0 12px rgba(0,217,126,0.5);
+    }
+    .shield-fill-soft {
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+      transition: width .6s ease;
+    }
+    .shield-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: .8rem;
+    }
+    .shield-legend b { font-weight: 800; }
+    .shield-legend .hard { color: var(--safe); }
+    .shield-legend .soft { color: var(--warn); }
+    .shield-status {
+      margin-top: 12px;
+      font-size: .85rem;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      border-left: 3px solid var(--info);
+      color: var(--text-2);
+      line-height: 1.4;
+    }
+    .shield-status.danger { border-left-color: var(--danger); color: #fca5a5; }
+    .shield-status.warn { border-left-color: var(--warn); color: #fcd34d; }
+    .shield-status.safe { border-left-color: var(--safe); color: #6ee7b7; }
+    .pulse {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .pulse-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .pulse-label {
+      font-size: .62rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .pulse-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.02em;
+    }
+    .pulse-value.danger { color: var(--danger); }
+    .pulse-value.safe { color: var(--safe); }
+    .pulse-value.warn { color: var(--warn); }
+    .pulse-sub {
+      font-size: .65rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .balances {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .balance-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .balance-card.hard { border-color: rgba(0,217,126,0.3); }
+    .balance-card.soft { border-color: rgba(245,158,11,0.3); }
+    .balance-card.hard::before, .balance-card.soft::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+    }
+    .balance-card.hard::before { background: var(--safe); }
+    .balance-card.soft::before { background: var(--warn); }
+    .balance-label {
+      font-size: .7rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: .05em;
+    }
+    .balance-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.02em;
+    }
+    .balance-card.hard .balance-value { color: var(--safe); }
+    .balance-card.soft .balance-value { color: var(--warn); }
+    .balance-sub {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .action-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 12px;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .15s;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .action-btn:hover { border-color: var(--border-bright); background: var(--surface); }
+    .action-btn:active { transform: scale(.98); }
+    .action-btn.primary {
+      grid-column: span 2;
+      background: linear-gradient(135deg, var(--safe), #00b368);
+      border: none;
+      color: #002918;
+      font-size: 1rem;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0,217,126,0.25);
+    }
+    .action-btn.primary:hover {
+      background: linear-gradient(135deg, #00e688, #00c976);
+      box-shadow: 0 4px 24px rgba(0,217,126,0.35);
+    }
+    .action-btn.ghost {
+      grid-column: span 2;
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      font-size: .75rem;
+      padding: 9px;
+    }
+    .action-btn.ghost:hover { color: var(--text-2); border-color: var(--border-bright); }
+    .action-icon { font-size: 1.2rem; }
+    .rates-compact {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+    .rates-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .rates-title {
+      font-size: .7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 700;
+    }
+    .rates-refresh {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: .7rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+    }
+    .rates-refresh:hover { border-color: var(--border-bright); color: var(--text); }
+    .rates-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .rate-cell {
+      text-align: center;
+      padding: 6px 4px;
+      border-radius: 8px;
+      background: var(--surface-2);
+    }
+    .rate-name {
+      font-size: .65rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .rate-val {
+      font-size: .9rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+    .rate-val.editable {
+      cursor: pointer;
+      border-bottom: 1px dashed var(--muted);
+      padding-bottom: 1px;
+      display: inline-block;
+    }
+    .rate-val.editable:hover { color: var(--info); border-color: var(--info); }
+    .rate-val input {
+      background: transparent;
+      border: 1px solid var(--info);
+      color: var(--text);
+      padding: 2px 4px;
+      border-radius: 4px;
+      width: 70px;
+      text-align: center;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 800;
+    }
+    .bitacora {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .bitacora-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    .bitacora-header h2 { font-size: .95rem; font-weight: 700; }
+    .bitacora-actions { display: flex; gap: 6px; }
+    .bitacora-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: .85rem;
+      padding: 24px 8px;
+      line-height: 1.5;
+    }
+    .tx-list { list-style: none; display: flex; flex-direction: column; }
+    .tx-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .tx-icon.blindaje { background: var(--safe-dim); color: var(--safe); }
+    .tx-icon.gasto { background: var(--danger-dim); color: var(--danger); }
+    .tx-icon.ingreso { background: rgba(59,130,246,0.12); color: var(--info); }
+    .tx-icon.desblindaje { background: var(--warn-dim); color: var(--warn); }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-title {
+      font-size: .85rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tx-meta {
+      font-size: .7rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .tx-amount {
+      font-size: .9rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .tx-amount.positive { color: var(--safe); }
+    .tx-amount.negative { color: var(--danger); }
+    .tx-amount.neutral { color: var(--text-2); }
+    .tx-sub {
+      font-size: .7rem;
+      color: var(--muted);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .tx-delete {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-family: inherit;
+      flex-shrink: 0;
+      opacity: 0.55;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .tx-delete:hover, .tx-delete:focus-visible {
+      opacity: 1;
+      color: var(--danger);
+      background: var(--danger-dim);
+      border-color: rgba(239,68,68,0.3);
+      outline: none;
+    }
+    dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0;
+      color: var(--text);
+      width: min(440px, 92vw);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    dialog::backdrop {
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+    }
+    .dialog-inner { padding: 22px; }
+    .dialog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .dialog-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+    .dialog-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+    }
+    .dialog-close:hover { background: var(--surface-2); color: var(--text); }
+    .field-group { margin-bottom: 14px; }
+    .field-label {
+      display: block;
+      font-size: .72rem;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field-input:focus { border-color: var(--info); }
+    .field-hint {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .field-hint.info { color: var(--info); }
+    .field-hint.safe { color: var(--safe); }
+    .field-hint.warn { color: var(--warn); }
+    .field-hint.danger { color: var(--danger); }
+    .dialog-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .dialog-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      transition: all .15s;
+    }
+    .dialog-btn.primary { background: var(--safe); color: #002918; }
+    .dialog-btn.primary:hover { background: #00e688; }
+    .dialog-btn.secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .dialog-btn.secondary:hover { border-color: var(--border-bright); }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: .85rem;
+      font-weight: 600;
+      z-index: 9999;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      animation: toastIn .2s ease-out;
+      max-width: 90%;
+      text-align: center;
+    }
+    .toast.error { border-color: var(--danger); color: #fca5a5; }
+    .toast.success { border-color: var(--safe); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } }
+  </style>
+</head>
+<body>
+
+  <header class="shield-header">
+    <div class="shield-top">
+      <div>
+        <div class="shield-label">Nivel de blindaje</div>
+        <div class="shield-percent" id="shieldPercent">0%</div>
+      </div>
+      <div style="text-align: right;">
+        <div class="shield-label">Patrimonio total</div>
+        <div style="font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums;" id="totalPatrimonio">$0,00</div>
+        <div style="font-size: .72rem; color: var(--muted);" id="totalPatrimonioBs">≈ 0 Bs</div>
+      </div>
+    </div>
+    <div class="shield-bar">
+      <div class="shield-fill-hard" id="fillHard" style="width: 0%"></div>
+      <div class="shield-fill-soft" id="fillSoft" style="width: 0%"></div>
+    </div>
+    <div class="shield-legend">
+      <span class="hard"><b id="pctHard">0%</b> USDT</span>
+      <span class="soft"><b id="pctSoft">0%</b> Bs</span>
+    </div>
+    <div class="shield-status" id="shieldStatus">Bienvenido. Ajusta tus saldos para empezar.</div>
+  </header>
+
+  <section class="pulse">
+    <div class="pulse-item">
+      <div class="pulse-label">Derretimiento</div>
+      <div class="pulse-value" id="meltValue">—</div>
+      <div class="pulse-sub" id="meltSub">Bs / día</div>
+    </div>
+    <div class="pulse-item">
+      <div class="pulse-label">Cobertura</div>
+      <div class="pulse-value" id="coverageValue">—</div>
+      <div class="pulse-sub" id="coverageSub">días</div>
+    </div>
+    <div class="pulse-item">
+      <div class="pulse-label">Brecha</div>
+      <div class="pulse-value warn" id="gapValue">—</div>
+      <div class="pulse-sub" id="gapSub">paralelo vs BCV</div>
+    </div>
+  </section>
+
+  <section class="balances">
+    <div class="balance-card hard">
+      <div class="balance-label">💎 USDT blindado</div>
+      <div class="balance-value" id="balUsdt">0,00 ₮</div>
+      <div class="balance-sub" id="balUsdtBs">≈ 0,00 Bs</div>
+    </div>
+    <div class="balance-card soft">
+      <div class="balance-label">🔥 Bs en riesgo</div>
+      <div class="balance-value" id="balBs">0,00 Bs</div>
+      <div class="balance-sub" id="balBsUsd">≈ $0,00</div>
+    </div>
+  </section>
+
+  <section class="actions">
+    <button class="action-btn primary" data-action="comprar" type="button">
+      <span class="action-icon">🛡️</span> Blindar (comprar USDT)
+    </button>
+    <button class="action-btn" data-action="gasto" type="button">➖ Gasto en Bs</button>
+    <button class="action-btn" data-action="ingreso" type="button">➕ Ingreso en Bs</button>
+    <button class="action-btn" data-action="vender" type="button">💸 Vender USDT</button>
+    <button class="action-btn ghost" data-action="ajustar" type="button">⚙️ Ajustar saldos actuales</button>
+  </section>
+
+  <section class="rates-compact">
+    <div class="rates-top">
+      <span class="rates-title">Tasas de hoy</span>
+      <button class="rates-refresh" id="btnRefresh" type="button">↻ Consultar</button>
+    </div>
+    <div class="rates-grid">
+      <div class="rate-cell">
+        <div class="rate-name">BCV</div>
+        <div class="rate-val" id="rateBcv">0,00</div>
+      </div>
+      <div class="rate-cell">
+        <div class="rate-name">Paralelo</div>
+        <div class="rate-val" id="rateParalelo">0,00</div>
+      </div>
+      <div class="rate-cell">
+        <div class="rate-name">USDT P2P</div>
+        <div class="rate-val editable" id="rateUsdt" title="Click para editar">0,00</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bitacora">
+    <div class="bitacora-header">
+      <h2>📓 Bitácora</h2>
+      <div class="bitacora-actions">
+        <button class="rates-refresh" id="btnExport" type="button">⬇ Exportar</button>
+        <button class="rates-refresh" id="btnClearHistory" type="button"
+                style="color: var(--danger); border-color: rgba(239,68,68,0.3);">🗑 Borrar todo</button>
+      </div>
+    </div>
+    <ul class="tx-list" id="txList"></ul>
+  </section>
+
+  <dialog id="formDialog">
+    <div class="dialog-inner">
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="dialogTitle">Blindar USDT</h2>
+        <button class="dialog-close" id="dialogClose" type="button">×</button>
+      </div>
+      <form id="actionForm">
+        <input type="hidden" id="formType" value="comprar">
+        <div id="formFields"></div>
+        <div class="dialog-actions">
+          <button type="button" class="dialog-btn secondary" id="dialogCancel">Cancelar</button>
+          <button type="submit" class="dialog-btn primary" id="dialogConfirm">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'blindaje_bs_v1';
+  const DEFAULT_RATES = { bcv: 45, paralelo: 52, usdt: 52 };
+
+  const $ = id => document.getElementById(id);
+
+  const fmt = (n, opts = {}) => {
+    if (!Number.isFinite(n)) return '—';
+    return n.toLocaleString('es-VE', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      ...opts
+    });
+  };
+
+  const round2 = n => Math.round(n * 100) / 100;
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  function toast(msg, type = '') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  // ===================== ESTADO =====================
+  function initialState() {
+    return {
+      version: 1,
+      rates: { ...DEFAULT_RATES },
+      usdtManual: false,
+      ratesUpdatedAt: null,
+      lastRatesSeen: null,
+      saldoInicial: { usdt: 0, bs: 0 },
+      movimientos: []
+    };
+  }
+
+  function normalizeState(raw) {
+    if (!raw || typeof raw !== 'object') return initialState();
+    const rates = raw.rates && typeof raw.rates === 'object' ? raw.rates : {};
+    return {
+      version: 1,
+      rates: {
+        bcv: Number(rates.bcv) > 0 ? Number(rates.bcv) : DEFAULT_RATES.bcv,
+        paralelo: Number(rates.paralelo) > 0 ? Number(rates.paralelo) : DEFAULT_RATES.paralelo,
+        usdt: Number(rates.usdt) > 0 ? Number(rates.usdt) : DEFAULT_RATES.usdt
+      },
+      usdtManual: !!raw.usdtManual,
+      ratesUpdatedAt: raw.ratesUpdatedAt || null,
+      lastRatesSeen: raw.lastRatesSeen && typeof raw.lastRatesSeen === 'object' ? raw.lastRatesSeen : null,
+      saldoInicial: {
+        usdt: Number(raw.saldoInicial?.usdt) || 0,
+        bs: Number(raw.saldoInicial?.bs) || 0
+      },
+      movimientos: Array.isArray(raw.movimientos)
+        ? raw.movimientos.filter(m => m && m.type && Number.isFinite(m.bsDelta) && Number.isFinite(m.usdtDelta))
+        : []
+    };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return normalizeState(JSON.parse(raw));
+    } catch (e) { console.warn('Error leyendo storage:', e); }
+    return initialState();
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      toast('No se pudo guardar. Storage lleno.', 'error');
+    }
+  }
+
+  let state = load();
+
+  // ===================== CÁLCULOS =====================
+  function saldoActual() {
+    let usdt = state.saldoInicial.usdt;
+    let bs = state.saldoInicial.bs;
+    for (const m of state.movimientos) {
+      usdt += m.usdtDelta;
+      bs += m.bsDelta;
+    }
+    return { usdt: round2(usdt), bs: round2(bs) };
+  }
+
+  function patrimonioEnUsd(saldos, rates) {
+    const usdtUsd = saldos.usdt;
+    const bsUsd = saldos.bs / (rates.paralelo || rates.usdt || 1);
+    return round2(usdtUsd + bsUsd);
+  }
+
+  function calcularBlindaje(saldos) {
+    const totalUsd = patrimonioEnUsd(saldos, state.rates);
+    if (totalUsd <= 0) return { pctHard: 0, pctSoft: 0 };
+    const pctHard = Math.max(0, Math.min(100, (saldos.usdt / totalUsd) * 100));
+    return { pctHard: round2(pctHard), pctSoft: round2(100 - pctHard) };
+  }
+
+  function derretimientoDiario() {
+    const saldos = saldoActual();
+    if (!state.lastRatesSeen || !state.lastRatesSeen.paralelo) return null;
+    const lastP = state.lastRatesSeen.paralelo;
+    const nowP = state.rates.paralelo;
+    if (nowP <= lastP) return { bsPerDay: 0, usdPerDay: 0 };
+    const deltaPct = (nowP - lastP) / lastP;
+    const lastTs = state.lastRatesSeen.ts || (Date.now() - 86400000);
+    const dias = Math.max(0.1, (Date.now() - lastTs) / 86400000);
+    const ratePerDay = deltaPct / dias;
+    const bsPerDay = saldos.bs * ratePerDay;
+    const usdPerDay = bsPerDay / nowP;
+    return { bsPerDay: round2(bsPerDay), usdPerDay: round2(usdPerDay) };
+  }
+
+  function coberturaDias() {
+    const saldos = saldoActual();
+    if (saldos.bs <= 0) return 0;
+    const hace7 = Date.now() - 7 * 86400000;
+    const gastos7 = state.movimientos
+      .filter(m => m.type === 'gasto' && m.ts >= hace7)
+      .reduce((sum, m) => sum + Math.abs(m.bsDelta), 0);
+    if (gastos7 === 0) return null;
+    const gastoPromedioDiario = gastos7 / 7;
+    return Math.floor(saldos.bs / gastoPromedioDiario);
+  }
+
+  function brechaParaleloBcv() {
+    if (!state.rates.bcv || !state.rates.paralelo) return 0;
+    return round2(((state.rates.paralelo - state.rates.bcv) / state.rates.bcv) * 100);
+  }
+
+  function getMovimientoTexto(m) {
+    switch (m.type) {
+      case 'comprar': return 'Blindaste USDT';
+      case 'vender': return 'Vendiste USDT';
+      case 'gasto': return m.note || 'Gasto';
+      case 'ingreso': return m.note || 'Ingreso';
+      default: return 'Movimiento';
+    }
+  }
+
+  function getMovimientoIcon(m) {
+    switch (m.type) {
+      case 'comprar': return '🛡️';
+      case 'vender': return '💸';
+      case 'gasto': return '➖';
+      case 'ingreso': return '➕';
+      default: return '•';
+    }
+  }
+
+  function getMovimientoClass(m) {
+    switch (m.type) {
+      case 'comprar': return 'blindaje';
+      case 'vender': return 'desblindaje';
+      case 'gasto': return 'gasto';
+      case 'ingreso': return 'ingreso';
+      default: return '';
+    }
+  }
+
+  // ===================== RENDER =====================
+  function render() {
+    const saldos = saldoActual();
+    const blindaje = calcularBlindaje(saldos);
+    const derret = derretimientoDiario();
+    const cob = coberturaDias();
+    const brecha = brechaParaleloBcv();
+    const patrUsd = patrimonioEnUsd(saldos, state.rates);
+
+    $('shieldPercent').textContent = blindaje.pctHard.toFixed(0) + '%';
+    $('shieldPercent').className = 'shield-percent ' +
+      (blindaje.pctHard >= 60 ? 'safe' : blindaje.pctHard >= 30 ? 'warn' : 'danger');
+
+    $('fillHard').style.width = blindaje.pctHard + '%';
+    $('fillSoft').style.width = blindaje.pctSoft + '%';
+    $('pctHard').textContent = blindaje.pctHard.toFixed(0) + '%';
+    $('pctSoft').textContent = blindaje.pctSoft.toFixed(0) + '%';
+
+    $('totalPatrimonio').textContent = '$' + fmt(patrUsd);
+    $('totalPatrimonioBs').textContent = '≈ ' + fmt(patrUsd * state.rates.paralelo) + ' Bs';
+
+    const statusEl = $('shieldStatus');
+    const sinDatos = state.movimientos.length === 0 && saldos.bs === 0 && saldos.usdt === 0;
+    if (sinDatos) {
+      statusEl.textContent = 'Bienvenido. Toca "Ajustar saldos actuales" para empezar.';
+      statusEl.className = 'shield-status';
+    } else if (blindaje.pctHard >= 60) {
+      statusEl.textContent = `🟢 Bien blindado. ${blindaje.pctHard.toFixed(0)}% de tu patrimonio está en USDT.`;
+      statusEl.className = 'shield-status safe';
+    } else if (blindaje.pctHard >= 30) {
+      statusEl.textContent = `🟡 Parcialmente blindado. ${blindaje.pctSoft.toFixed(0)}% de tu patrimonio está expuesto en Bs.`;
+      statusEl.className = 'shield-status warn';
+    } else {
+      statusEl.textContent = `🔴 Alerta. Solo ${blindaje.pctHard.toFixed(0)}% está blindado. Tus Bs están expuestos a la devaluación.`;
+      statusEl.className = 'shield-status danger';
+    }
+
+    const meltEl = $('meltValue');
+    if (derret === null) {
+      meltEl.textContent = '—';
+      $('meltSub').textContent = 'sin datos';
+      meltEl.className = 'pulse-value';
+    } else if (derret.bsPerDay > 0) {
+      meltEl.textContent = fmt(derret.bsPerDay);
+      $('meltSub').textContent = '≈ $' + fmt(derret.usdPerDay) + '/día';
+      meltEl.className = 'pulse-value danger';
+    } else {
+      meltEl.textContent = '0,00';
+      $('meltSub').textContent = 'estable';
+      meltEl.className = 'pulse-value safe';
+    }
+
+    const cobEl = $('coverageValue');
+    if (cob === null) {
+      cobEl.textContent = '—';
+      $('coverageSub').textContent = 'sin gastos';
+      cobEl.className = 'pulse-value';
+    } else if (cob === 0) {
+      cobEl.textContent = '0';
+      $('coverageSub').textContent = 'agotado';
+      cobEl.className = 'pulse-value danger';
+    } else {
+      cobEl.textContent = cob;
+      $('coverageSub').textContent = 'días';
+      cobEl.className = 'pulse-value ' + (cob < 3 ? 'danger' : cob < 7 ? 'warn' : 'safe');
+    }
+
+    $('gapValue').textContent = (brecha > 0 ? '+' : '') + brecha.toFixed(1) + '%';
+
+    $('balUsdt').textContent = fmt(saldos.usdt) + ' ₮';
+    $('balUsdtBs').textContent = '≈ ' + fmt(saldos.usdt * state.rates.usdt) + ' Bs';
+    $('balBs').textContent = fmt(saldos.bs) + ' Bs';
+    $('balBsUsd').textContent = '≈ $' + fmt(saldos.bs / state.rates.paralelo);
+
+    $('rateBcv').textContent = fmt(state.rates.bcv);
+    $('rateParalelo').textContent = fmt(state.rates.paralelo);
+    if (!$('rateUsdt').querySelector('input')) {
+      $('rateUsdt').textContent = fmt(state.rates.usdt) + (state.usdtManual ? ' *' : '');
+      $('rateUsdt').title = state.usdtManual ? 'Tasa manual (click para editar)' : 'Sincronizada con paralelo (click para fijar manual)';
+    }
+
+    renderBitacora();
+  }
+
+  function renderBitacora() {
+    const list = $('txList');
+    list.innerHTML = '';
+
+    if (state.movimientos.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'bitacora-empty';
+      empty.textContent = 'Sin movimientos aún. Empieza blindando tus Bs en USDT.';
+      list.appendChild(empty);
+      return;
+    }
+
+    const sorted = [...state.movimientos].sort((a, b) => b.ts - a.ts).slice(0, 25);
+
+    sorted.forEach(m => {
+      const li = document.createElement('li');
+      li.className = 'tx-item';
+
+      const icon = document.createElement('div');
+      icon.className = 'tx-icon ' + getMovimientoClass(m);
+      icon.textContent = getMovimientoIcon(m);
+
+      const info = document.createElement('div');
+      info.className = 'tx-info';
+      const title = document.createElement('div');
+      title.className = 'tx-title';
+      title.textContent = getMovimientoTexto(m);
+      const meta = document.createElement('div');
+      meta.className = 'tx-meta';
+      const fechaStr = new Date(m.ts).toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
+      let metaStr = fechaStr;
+      if (m.rateRef) metaStr += ` · ${fmt(m.rateRef)} Bs/USDT`;
+      meta.textContent = metaStr;
+      info.appendChild(title);
+      info.appendChild(meta);
+
+      const amount = document.createElement('div');
+      amount.style.textAlign = 'right';
+
+      const main = document.createElement('div');
+      if (m.type === 'comprar' || m.type === 'vender') {
+        main.textContent = (m.usdtDelta > 0 ? '+' : '') + fmt(m.usdtDelta) + ' ₮';
+        main.className = 'tx-amount ' + (m.usdtDelta > 0 ? 'positive' : 'negative');
+      } else {
+        main.textContent = (m.bsDelta > 0 ? '+' : '') + fmt(m.bsDelta) + ' Bs';
+        main.className = 'tx-amount ' + (m.bsDelta > 0 ? 'positive' : 'negative');
+      }
+
+      const sub = document.createElement('div');
+      sub.className = 'tx-sub';
+      if (m.type === 'comprar') sub.textContent = '−' + fmt(Math.abs(m.bsDelta)) + ' Bs';
+      else if (m.type === 'vender') sub.textContent = '+' + fmt(m.bsDelta) + ' Bs';
+
+      amount.appendChild(main);
+      if (sub.textContent) amount.appendChild(sub);
+
+      const btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'tx-delete';
+      btnDel.title = 'Eliminar movimiento';
+      btnDel.setAttribute('aria-label', 'Eliminar movimiento');
+      btnDel.textContent = '×';
+      btnDel.addEventListener('click', () => deleteMovimiento(m.id));
+
+      li.appendChild(icon);
+      li.appendChild(info);
+      li.appendChild(amount);
+      li.appendChild(btnDel);
+      list.appendChild(li);
+    });
+  }
+
+  // ===================== ELIMINAR =====================
+  function deleteMovimiento(id) {
+    const idx = state.movimientos.findIndex(m => m.id === id);
+    if (idx === -1) return;
+    const mov = state.movimientos[idx];
+    const nombre = getMovimientoTexto(mov);
+    if (!confirm(`¿Eliminar "${nombre}"?\n\nLos saldos se recalcularán automáticamente.`)) return;
+
+    state.movimientos.splice(idx, 1);
+    save();
+    render();
+
+    const saldos = saldoActual();
+    if (saldos.bs < -0.01 || saldos.usdt < -0.01) {
+      toast('Movimiento eliminado. Ojo: tu saldo quedó negativo.', 'error');
+    } else {
+      toast('Movimiento eliminado ✓', 'success');
+    }
+  }
+
+  // ===================== DIALOG =====================
+  const formTemplates = {
+    comprar: {
+      title: '🛡️ Blindar USDT',
+      fields: `
+        <div class="field-group">
+          <label class="field-label" for="fBs">Pagaste (Bs)</label>
+          <input class="field-input" type="number" id="fBs" step="0.01" min="0.01" placeholder="0,00" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fUsdt">Recibiste (USDT)</label>
+          <input class="field-input" type="number" id="fUsdt" step="0.01" min="0.01" placeholder="0,00" required>
+        </div>
+        <div class="field-hint info" id="rateHint">La tasa implícita aparecerá aquí.</div>
+      `
+    },
+    vender: {
+      title: '💸 Vender USDT',
+      fields: `
+        <div class="field-group">
+          <label class="field-label" for="fUsdt">Vendiste (USDT)</label>
+          <input class="field-input" type="number" id="fUsdt" step="0.01" min="0.01" placeholder="0,00" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fBs">Recibiste (Bs)</label>
+          <input class="field-input" type="number" id="fBs" step="0.01" min="0.01" placeholder="0,00" required>
+        </div>
+        <div class="field-hint info" id="rateHint">La tasa implícita aparecerá aquí.</div>
+      `
+    },
+    gasto: {
+      title: '➖ Gasto en Bs',
+      fields: `
+        <div class="field-group">
+          <label class="field-label" for="fBs">Monto gastado (Bs)</label>
+          <input class="field-input" type="number" id="fBs" step="0.01" min="0.01" placeholder="0,00" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fNote">Descripción</label>
+          <input class="field-input" type="text" id="fNote" placeholder="Ej: mercado, pasaje..." maxlength="60">
+        </div>
+      `
+    },
+    ingreso: {
+      title: '➕ Ingreso en Bs',
+      fields: `
+        <div class="field-group">
+          <label class="field-label" for="fBs">Monto recibido (Bs)</label>
+          <input class="field-input" type="number" id="fBs" step="0.01" min="0.01" placeholder="0,00" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fNote">Descripción</label>
+          <input class="field-input" type="text" id="fNote" placeholder="Ej: salario, freelance..." maxlength="60">
+        </div>
+        <div class="field-hint warn">💡 Sugerencia: blinda este dinero cuanto antes. Cada día en Bs pierde valor.</div>
+      `
+    },
+    ajustar: {
+      title: '⚙️ Ajustar saldos',
+      fields: `
+        <div class="field-hint info" style="margin-bottom:10px;">
+          Ingresa cuánto tienes AHORA en cada cuenta. Se recalcula el saldo base para que el saldo actual coincida.
+        </div>
+        <div class="field-hint warn" style="margin-bottom:12px;">
+          ⚠️ Esto NO borra el historial. Si quieres empezar de cero, cierra esto y usa "🗑 Borrar todo" en la bitácora.
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fBs">Bs actuales en cuenta</label>
+          <input class="field-input" type="number" id="fBs" step="0.01" min="0" placeholder="0,00" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fUsdt">USDT actuales en Binance</label>
+          <input class="field-input" type="number" id="fUsdt" step="0.01" min="0" placeholder="0,00" required>
+        </div>
+      `
+    }
+  };
+
+  function openDialog(type) {
+    const tpl = formTemplates[type];
+    if (!tpl) return;
+    $('formType').value = type;
+    $('dialogTitle').textContent = tpl.title;
+    $('formFields').innerHTML = tpl.fields;
+
+    if (type === 'ajustar') {
+      const saldos = saldoActual();
+      setTimeout(() => {
+        $('fBs').value = saldos.bs;
+        $('fUsdt').value = saldos.usdt;
+      }, 20);
+    }
+
+    const hint = $('rateHint');
+    if (hint) {
+      const fBs = $('fBs');
+      const fUsdt = $('fUsdt');
+      const update = () => {
+        const bs = parseFloat(fBs.value) || 0;
+        const usdt = parseFloat(fUsdt.value) || 0;
+        if (bs > 0 && usdt > 0) {
+          const rate = bs / usdt;
+          const cmp = state.rates.paralelo > 0 ? ((rate - state.rates.paralelo) / state.rates.paralelo) * 100 : 0;
+          const cls = cmp > 2 ? 'danger' : cmp < -2 ? 'safe' : 'info';
+          const msg = cmp > 2 ? `Pagaste ${cmp.toFixed(1)}% MÁS que el paralelo`
+                    : cmp < -2 ? `Pagaste ${Math.abs(cmp).toFixed(1)}% menos que el paralelo`
+                    : `En línea con el paralelo`;
+          hint.className = 'field-hint ' + cls;
+          hint.textContent = `Tasa implícita: ${rate.toFixed(2)} Bs/USDT · ${msg}`;
+        } else {
+          hint.className = 'field-hint info';
+          hint.textContent = 'La tasa implícita aparecerá aquí.';
+        }
+      };
+      fBs.addEventListener('input', update);
+      fUsdt.addEventListener('input', update);
+    }
+
+    $('formDialog').showModal();
+    setTimeout(() => {
+      const first = $('formFields').querySelector('input');
+      if (first) first.focus();
+    }, 80);
+  }
+
+  function closeDialog() {
+    $('formDialog').close();
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const type = $('formType').value;
+    const ts = Date.now();
+    const fecha = today();
+
+    try {
+      if (type === 'ajustar') {
+        const targetBs = parseFloat($('fBs').value);
+        const targetUsdt = parseFloat($('fUsdt').value);
+        if (!(targetBs >= 0) || !(targetUsdt >= 0)) throw new Error('Valores inválidos');
+        let sumBs = 0, sumUsdt = 0;
+        for (const m of state.movimientos) {
+          sumBs += m.bsDelta;
+          sumUsdt += m.usdtDelta;
+        }
+        state.saldoInicial.bs = targetBs - sumBs;
+        state.saldoInicial.usdt = targetUsdt - sumUsdt;
+        save();
+        closeDialog();
+        render();
+        toast('Saldos ajustados ✓', 'success');
+        return;
+      }
+
+      let mov = null;
+      const saldos = saldoActual();
+
+      if (type === 'comprar') {
+        const bs = parseFloat($('fBs').value);
+        const usdt = parseFloat($('fUsdt').value);
+        if (!(bs > 0) || !(usdt > 0)) throw new Error('Monto inválido');
+        if (bs > saldos.bs + 0.01) throw new Error(`Solo tienes ${fmt(saldos.bs)} Bs registrados. Ajusta tu saldo si es incorrecto.`);
+        mov = {
+          id: uuid(), ts, fecha, type: 'comprar',
+          bsDelta: -bs, usdtDelta: usdt,
+          rateRef: round2(bs / usdt), note: ''
+        };
+      } else if (type === 'vender') {
+        const usdt = parseFloat($('fUsdt').value);
+        const bs = parseFloat($('fBs').value);
+        if (!(bs > 0) || !(usdt > 0)) throw new Error('Monto inválido');
+        if (usdt > saldos.usdt + 0.01) throw new Error(`Solo tienes ${fmt(saldos.usdt)} USDT registrados.`);
+        mov = {
+          id: uuid(), ts, fecha, type: 'vender',
+          bsDelta: bs, usdtDelta: -usdt,
+          rateRef: round2(bs / usdt), note: ''
+        };
+      } else if (type === 'gasto') {
+        const bs = parseFloat($('fBs').value);
+        if (!(bs > 0)) throw new Error('Monto inválido');
+        const note = ($('fNote').value || '').trim().slice(0, 60);
+        mov = {
+          id: uuid(), ts, fecha, type: 'gasto',
+          bsDelta: -bs, usdtDelta: 0,
+          rateRef: state.rates.paralelo, note: note || 'Gasto'
+        };
+      } else if (type === 'ingreso') {
+        const bs = parseFloat($('fBs').value);
+        if (!(bs > 0)) throw new Error('Monto inválido');
+        const note = ($('fNote').value || '').trim().slice(0, 60);
+        mov = {
+          id: uuid(), ts, fecha, type: 'ingreso',
+          bsDelta: bs, usdtDelta: 0,
+          rateRef: state.rates.paralelo, note: note || 'Ingreso'
+        };
+      } else {
+        throw new Error('Tipo desconocido');
+      }
+
+      state.movimientos.unshift(mov);
+      save();
+      closeDialog();
+      render();
+
+      if (type === 'ingreso' && mov) {
+        const usdEquiv = mov.bsDelta / state.rates.paralelo;
+        toast(`Ingreso registrado. Equivale a $${fmt(usdEquiv)}. ¡Blíndalo pronto!`, 'success');
+      } else if (type === 'comprar') {
+        toast('Blindaje registrado ✓', 'success');
+      } else {
+        toast('Registrado ✓', 'success');
+      }
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  // ===================== TASAS =====================
+  async function fetchRates() {
+    const btn = $('btnRefresh');
+    btn.textContent = '…';
+    btn.disabled = true;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const dolares = await fetch('https://ve.dolarapi.com/v1/dolares', { signal: controller.signal })
+        .then(r => r.json()).catch(() => null);
+      clearTimeout(timeout);
+
+      state.lastRatesSeen = {
+        paralelo: state.rates.paralelo,
+        bcv: state.rates.bcv,
+        ts: Date.now()
+      };
+
+      let updated = false;
+      if (Array.isArray(dolares)) {
+        const oficial = dolares.find(d => d.fuente === 'oficial');
+        const paralelo = dolares.find(d => d.fuente === 'paralelo');
+        if (oficial && Number(oficial.promedio) > 0) {
+          state.rates.bcv = round2(Number(oficial.promedio));
+          updated = true;
+        }
+        if (paralelo && Number(paralelo.promedio) > 0) {
+          state.rates.paralelo = round2(Number(paralelo.promedio));
+          if (!state.usdtManual) {
+            state.rates.usdt = state.rates.paralelo;
+          }
+          updated = true;
+        }
+      }
+
+      if (updated) {
+        state.ratesUpdatedAt = Date.now();
+        save();
+        render();
+        toast('Tasas actualizadas', 'success');
+      } else {
+        toast('La API no devolvió datos usables', 'error');
+      }
+    } catch (e) {
+      clearTimeout(timeout);
+      toast('Error al consultar tasas', 'error');
+    } finally {
+      btn.textContent = '↻ Consultar';
+      btn.disabled = false;
+    }
+  }
+
+  function editUsdtRate() {
+    const el = $('rateUsdt');
+    if (el.querySelector('input')) return;
+    const current = state.rates.usdt;
+    el.textContent = '';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.01';
+    input.value = current;
+    el.appendChild(input);
+    input.focus();
+    input.select();
+
+    let finished = false;
+    const finish = (commit) => {
+      if (finished) return;
+      finished = true;
+      if (commit) {
+        const num = parseFloat(input.value);
+        if (num > 0) {
+          state.rates.usdt = round2(num);
+          state.usdtManual = true;
+          save();
+          toast('Tasa USDT fijada manualmente', 'success');
+        } else {
+          toast('Tasa inválida', 'error');
+        }
+      }
+      render();
+    };
+
+    input.addEventListener('blur', () => finish(true));
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+      if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    });
+  }
+
+  // ===================== EXPORT =====================
+  function exportData() {
+    try {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `blindaje_${today()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('Datos exportados', 'success');
+    } catch (e) {
+      toast('Error al exportar', 'error');
+    }
+  }
+
+  // ===================== CLEAR HISTORY =====================
+  function clearHistory() {
+    const vacio = state.movimientos.length === 0
+      && state.saldoInicial.bs === 0
+      && state.saldoInicial.usdt === 0;
+    if (vacio) {
+      toast('Ya está todo vacío', '');
+      return;
+    }
+    if (!confirm(
+      '¿Borrar TODO el historial y dejar saldos en 0?\n\n' +
+      'Esto NO se puede deshacer. Si quieres conservar los datos, exporta primero.'
+    )) return;
+
+    state.movimientos = [];
+    state.saldoInicial = { usdt: 0, bs: 0 };
+    save();
+    render();
+    toast('Todo reiniciado ✓', 'success');
+  }
+
+  // ===================== WIRE =====================
+  function wire() {
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => openDialog(btn.dataset.action));
+    });
+
+    $('dialogClose').addEventListener('click', closeDialog);
+    $('dialogCancel').addEventListener('click', closeDialog);
+    $('actionForm').addEventListener('submit', handleSubmit);
+    $('btnRefresh').addEventListener('click', fetchRates);
+    $('rateUsdt').addEventListener('click', editUsdtRate);
+    $('btnExport').addEventListener('click', exportData);
+    $('btnClearHistory').addEventListener('click', clearHistory);
+
+    $('formDialog').addEventListener('click', e => {
+      if (e.target === $('formDialog')) closeDialog();
+    });
+  }
+
+  // ===================== INIT =====================
+  function init() {
+    render();
+    wire();
+    if (!state.ratesUpdatedAt) {
+      setTimeout(fetchRates, 800);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
